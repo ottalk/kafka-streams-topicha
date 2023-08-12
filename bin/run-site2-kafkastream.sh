@@ -39,5 +39,5 @@ stop)
   fi
   ;;
   *)
-    echo "USAGE: $0 <start|stop>"
+    echo "USAGE: $0 <start|status|stop>"
 esac
