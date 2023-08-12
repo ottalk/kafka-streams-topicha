@@ -1,0 +1,12 @@
+{"properties": [
+  {
+    "name": "topicha.inputTopicName",
+    "type": "java.lang.String",
+    "description": "A description for 'straightthrough.inputTopicName'"
+  },
+  {
+    "name": "topicha.outputTopicName",
+    "type": "java.lang.String",
+    "description": "A description for 'straightthrough.outputTopicName'"
+  }
+]}
