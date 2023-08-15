@@ -14,29 +14,30 @@ case "$1" in
 start)
   nohup $JAVA_HOME/bin/java $SPRING_OPTIONS $JVM_OPTIONS -jar $JAR_FILE > $RUN_OUTPUT_FILE 2>&1  &
   echo "$!" > $PID_FILE
-  echo STARTED
+  echo "$0 STARTED"
   ;;
 status)
-  if [ -f $PID_FILE ]; then
+  if [ -f $PID_FILE ]
+  then
     if ps -p `cat $PID_FILE` > /dev/null
     then
-      echo RUNNING
+      echo "$0 RUNNING"
     else 
-      echo STOPPED
+      echo "$0 STOPPED"
     fi
   else
-    echo STOPPED
+    echo "$0 STOPPED"
   fi
   ;;
 stop)
   if [ -f $PID_FILE ]
   then
     kill `cat $PID_FILE`
-    echo STOPPED
+    echo "$0 STOPPED"
     rm $PID_FILE
     rm "./$RUN_OUTPUT_FILE"
   else
-    echo "It seems the process isn't running."
+    echo "$0 - It seems the process isn't running."
   fi
   ;;
   *)

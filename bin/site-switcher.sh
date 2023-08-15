@@ -1,32 +1,68 @@
 #!/bin/bash
 
-url_site1="http://localhost:8000/"
-url_site2="http://localhost:9000/"
-expected_response="Alive"
-current_site=$url_site1
+declare -A SITES=(
+ [site1]="http://localhost:8000/"
+ [site2]="http://localhost:9000/"
+)
 
+expected_response="Alive"
+current_site="site1"
+
+# FUNCTIONS
+stop_other_sites() {
+    $curr_site=$1;
+    for site in "${!SITES[@]}"
+    do
+        if [ "`./run-site1-kafkastream.sh ${site} status`" == *"RUNNING"* ]
+        then
+            if [ "${site}" != "${curr_site}" ]
+            then
+                echo "Stopping $site...";
+                bash -c "./run-site1-kafkastream.sh ${site} stop";
+            fi
+        fi
+    done   
+}
+
+switch_site() {
+    $curr_site=$1;
+    for site in "${!SITES[@]}"
+    do
+        if [ "${site}" != "${curr_site}" ]
+        then
+            check_url=`curl -s ${SITES[$site]} | grep $expected_response`;
+            if [ "$check_url" == "$expected_response" ]
+            then
+                new_site=$site;
+                bash -c "./run-site-kafkastream.sh $site start";
+                break;
+            fi
+        fi
+    done
+    return ${new_site}
+}
+
+# MAIN
 echo "Initialising..."
 echo "Checking running sites..."
-echo "Site1 KafkaStream: `./run-site1-kafkastream.sh status`"
-echo "Site2 KafkaStream: `./run-site2-kafkastream.sh status`" 
+for site in "${!SITES[@]}"
+do
+ echo "${site} KafkaStream: `./run-site-kafkastream.sh ${site} status`"
+done
 
-echo "Default to $current_site if it is alive, else use other site .."
-check_url=`curl -s $current_site | grep $expected_response`;
+echo "Default to ${SITES[$current_site]} if it is alive, else use other site .."
+# Stop other site kafkastream if it is running
+stop_other_sites $current_site;
+
+check_url=`curl -s ${SITES[$current_site]} | grep $expected_response`;
 if [ "$check_url" == "$expected_response" ]
     then 
-        echo "Site $current_site is Alive";
-        bash -c "./run-site1-kafkastream.sh start";
-        # Stop other site kafkastream if it is running
-        bash -c "./run-site2-kafkastream.sh stop";
+        echo "Site${SITES[$current_site]} is Alive";
+        bash -c "./run-site-kafkastream.sh $current_site start";
+
     else
-        echo "Site $current_site is Down, switching site to $url_site2";
-        current_site=$url_site2
-        check_url=`curl -s $current_site | grep $expected_response`;
-        if [ "$check_url" == "$expected_response" ]
-        then
-            bash -c "./run-site2-kafkastream.sh start";
-            # Stop other site kafkastream if it is running
-            bash -c "./run-site1-kafkastream.sh stop";
+        echo "Site ${SITES[$current_site]} is Down, switching site";
+        current_site="$(switch_site)";
         else
             echo "ERROR: Both sites are down..exiting, please investigate!"
             exit 1;
@@ -36,24 +72,16 @@ fi
 echo "Start monitoring loop..."
 while true
 do
-    check_url=`curl -s $current_site | grep $expected_response`;
+    check_url=`curl -s ${SITES[$current_site]} | grep $expected_response`;
     if [ "$check_url" == "$expected_response" ]
     then 
-        echo "Site $current_site is Alive";
+        echo "Site ${SITES[$current_site]} is Alive";
     else
-        echo "Site $current_site is Down, switching site";
-        if [ "$current_site" == "$url_site1" ]
-        then
-            current_site=$url_site2;
-            bash -c "./run-site2-kafkastream.sh start";
-            # Stop other site kafkastream if it is running
-            bash -c "./run-site1-kafkastream.sh stop";
-        else
-            current_site=$url_site1;
-            bash -c "./run-site1-kafkastream.sh start";
-            # Stop other site kafkastream if it is running
-            bash -c "./run-site2-kafkastream.sh stop";
-        fi
+        echo "Site ${SITES[$current_site]} is Down, switching site";
+        echo "Scan for next site which is Alive and switch"
+        current_site="$(switch_site)";
+        # Stop other site kafkastreams if running
+        stop_other_sites $current_site;
     fi
     sleep 2;
 done
