@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/opt/homebrew/bin/bash
 
 SITE=$1
 
@@ -14,9 +14,17 @@ RUN_OUTPUT_FILE="run-${SITE}-kafkastream.out"
 
 case "$2" in
 start)
-  nohup $JAVA_HOME/bin/java $SPRING_OPTIONS $JVM_OPTIONS -jar $JAR_FILE > $RUN_OUTPUT_FILE 2>&1  &
-  echo "$!" > $PID_FILE
-  echo "$0 STARTED"
+  if [ -f $PID_FILE ]
+  then
+    if ps -p `cat $PID_FILE` > /dev/null
+    then
+      echo "ALREADY_RUNNING"
+    else
+      nohup $JAVA_HOME/bin/java $SPRING_OPTIONS $JVM_OPTIONS -jar $JAR_FILE > $RUN_OUTPUT_FILE 2>&1  &
+      echo "$!" > $PID_FILE;
+      echo "$0 STARTED";
+    fi
+  fi
   ;;
 status)
   if [ -f $PID_FILE ]
